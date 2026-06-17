@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To‑Do приложение</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin:0;
+      padding:0;
+      background:#f8f8fb;
+      color:#222;
+    }
+
+    header {
+      text-align:center;
+      padding:20px;
+      background:#0077ff;
+      color:#fff;
+    }
+    header h1 { margin:0; font-size:2em; }
+    header p { margin:5px 0 0; font-size:1.1em; }
+
+    section {
+      max-width:800px;
+      margin:40px auto;
+      padding:20px;
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    h2 {
+      margin-top:0;
+      border-left:4px solid #0077ff;
+      padding-left:10px;
+    }
+
+    /* To-Do */
+    .todo-container { display:flex; flex-direction:column; gap:15px; }
+    #taskInput, #deadlineInput {
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      font-size:1em;
+    }
+    #addTask {
+      background:linear-gradient(90deg, #0077ff, #00ffcc);
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      padding:10px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    #addTask:hover {
+      background:linear-gradient(90deg, #00ffcc, #0077ff);
+    }
+    #taskList { list-style:none; padding:0; }
+    #taskList li {
+      background:#f9f9f9;
+      border-radius:8px;
+      padding:10px;
+      margin-bottom:10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .task-info { display:flex; flex-direction:column; }
+    .deadline { font-size:0.9em; color:#555; }
+    .task-done { text-decoration:line-through; color:#888; }
+
+    footer {
+      text-align:center;
+      padding:15px;
+      background:#0077ff;
+      color:#fff;
+      margin-top:40px;
+    }
+
+    .expired {
+  background:#ffe5e5 !important;
+  border:1px solid #ff0000;
+  color:#b30000;
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>To‑Do приложение</h1>
+    <p>Функционал: добавление задач, отметка выполнения, удаление и отслеживание сроков</p>
+  </header>
+
+  <section id="about">
+    <h2>Описание</h2>
+    <p>
+      Это веб‑приложение позволяет управлять списком задач прямо в браузере. 
+      Вы можете добавлять новые задачи, указывать срок их выполнения, отмечать выполненные и удалять ненужные. 
+      Все данные сохраняются, поэтому список и дедлайны остаются даже после перезагрузки страницы.
+    </p>
+  </section>
+
+  <section id="todo">
+    <h2>Ваш список задач</h2>
+    <div class="todo-container">
+      <input type="text" id="taskInput" placeholder="Введите задачу...">
+      <input type="datetime-local" id="deadlineInput">
+      <button id="addTask">Добавить</button>
+      <ul id="taskList"></ul>
+    </div>
+  </section>
+  
+
+  <footer>
+    © 2026 Prime | Учебное To‑Do приложение
+  </footer>
+
+  <script>
+    const taskInput = document.getElementById("taskInput");
+    const deadlineInput = document.getElementById("deadlineInput");
+    const addTaskBtn = document.getElementById("addTask");
+    const taskList = document.getElementById("taskList");
+
+    document.addEventListener("DOMContentLoaded", loadTasks);
+
+    addTaskBtn.addEventListener("click", () => {
+      const taskText = taskInput.value.trim();
+      const deadline = deadlineInput.value;
+      if (taskText !== "" && deadline !== "") {
+        addTask(taskText, deadline);
+        saveTask(taskText, deadline);
+        taskInput.value = "";
+        deadlineInput.value = "";
+      }
+    });
+
+    function addTask(text, deadline) {
+      const li = document.createElement("li");
+
+      const infoDiv = document.createElement("div");
+      infoDiv.classList.add("task-info");
+      infoDiv.innerHTML = `<span>${text}</span><span class="deadline">Срок: ${formatDeadline(deadline)}</span>`;
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "✖";
+      deleteBtn.style.marginLeft = "10px";
+      deleteBtn.onclick = () => {
+        li.remove();
+        removeTask(text);
+      };
+
+      li.addEventListener("click", () => {
+        li.classList.toggle("task-done");
+      });
+
+      li.appendChild(infoDiv);
+      li.appendChild(deleteBtn);
+      taskList.appendChild(li);
+
+      startCountdown(infoDiv.querySelector(".deadline"), deadline);
+    }
+
+    function saveTask(task, deadline) {
+      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+      tasks.push({ text: task, deadline: deadline });
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+      tasks.forEach(t => addTask(t.text, t.deadline));
+    }
+
+    function removeTask(task) {
+      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+      tasks = tasks.filter(t => t.text !== task);
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function formatDeadline(deadline) {
+      const date = new Date(deadline);
+      return date.toLocaleString("ru-RU");
+    }
+
+    function startCountdown(element, deadline) {
+      const target = new Date(deadline).getTime();
+      const interval = setInterval(() => {
+        const now = new Date().getTime();
+        const diff = target - now;
+        if (diff <= 0) {
+          element.textContent = "Срок истёк!";
+          clearInterval(interval);
+        } else {
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          element.textContent = `Осталось: ${hours}ч ${minutes}м`;
+        }
+      }, 60000); // обновление каждую минуту
+    }
+
+    function startCountdown(element, deadline, li) {
+  const target = new Date(deadline).getTime();
+  const interval = setInterval(() => {
+    const now = new Date().getTime();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      element.textContent = "Срок истёк!";
+      li.classList.add("expired");
+      clearInterval(interval);
+
+      // Уведомление
+      alert(`Задача "${li.querySelector('.task-info span').textContent}" просрочена!`);
+    } else {
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      element.textContent = `Осталось: ${hours}ч ${minutes}м`;
+    }
+  }, 60000); // обновление каждую минуту
+}
+
+function addTask(text, deadline) {
+  const li = document.createElement("li");
+
+  const infoDiv = document.createElement("div");
+  infoDiv.classList.add("task-info");
+  infoDiv.innerHTML = `<span>${text}</span><span class="deadline">Срок: ${formatDeadline(deadline)}</span>`;
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "✖";
+  deleteBtn.style.marginLeft = "10px";
+  deleteBtn.onclick = () => {
+    li.remove();
+    removeTask(text);
+  };
+
+  li.addEventListener("click", () => {
+    li.classList.toggle("task-done");
+  });
+
+  li.appendChild(infoDiv);
+  li.appendChild(deleteBtn);
+  taskList.appendChild(li);
+
+  startCountdown(infoDiv.querySelector(".deadline"), deadline, li);
+}
+
+  </script>
+
+</body>
+</html>
